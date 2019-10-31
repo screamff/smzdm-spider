@@ -15,6 +15,7 @@ def main(page_range):
         target_address = "https://www.smzdm.com/jingxuan/p" + str(i)
         request_thread = threading.Thread(target=get_site, args=(target_address,))
         request_thread.start()
+        time.sleep(0.5)
         # target_address = input("输入物品连接:")
 
 
@@ -27,24 +28,24 @@ def get_site(target_address):
         print("http错误代码", r.status_code)
         exit()
     soup = BeautifulSoup(r.content, "html5lib")
-    print("正在搜索以下页面...", target_address, soup.title.string)
+    # print("正在搜索以下页面...", target_address, soup.title.string)
     htmls.put(soup)
 
     
 def search_site():
     while True:
         try:
-            site = htmls.get()
+            site = htmls.get(timeout=5)
         except  Exception as e:
-            continue
+            break
         # 保存网页
         # with open(".\saved.html", "wb") as f:
         #         f.write(r.content)
         div_feed = site.find_all('div', class_="z-feed-foot-l")
-        analyze(div_feed, 1)
+        analyze(div_feed, 0)
         
 
-def analyze(div_feed, timesleep=0.8):
+def analyze(div_feed, timesleep=0.3):
     for i in div_feed:
         for item in i.parent.previous_siblings:
             if item.name == 'h5':
@@ -63,7 +64,8 @@ def analyze(div_feed, timesleep=0.8):
 
 
 if __name__=="__main__":
-    htmls = queue.Queue
-    main(20)
-    search_site()
+    htmls = queue.Queue()
+    search_thread = threading.Thread(target=search_site)
+    search_thread.start()
+    main(100)
 
