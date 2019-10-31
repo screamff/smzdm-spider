@@ -4,6 +4,8 @@ import re
 import requests
 import time
 from bs4 import BeautifulSoup
+import threading
+import queue
 
 
 def main(page_range):
@@ -11,26 +13,39 @@ def main(page_range):
     page_range:浏览范围，为整数"""
     for i in range(page_range):
         target_address = "https://www.smzdm.com/jingxuan/p" + str(i)
+        request_thread = threading.Thread(target=get_site, args=(target_address,))
+        request_thread.start()
+        time.sleep(0.5)
         # target_address = input("输入物品连接:")
-        r = requests.get(target_address, headers={"User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.70 Safari/537.36"})
-        if r.status_code == 200:
-            pass
-        else:
-            print("http错误代码", r.status_code)
-            exit()
-        soup = BeautifulSoup(r.content, "html5lib")
 
+
+def get_site(target_address):
+    r = requests.get(target_address, headers={"User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.70 Safari/537.36"})
+    if r.status_code == 200:
+        pass
+    else:
+        print("http错误代码", r.status_code)
+        exit()
+    soup = BeautifulSoup(r.content, "html5lib")
+    # print("正在搜索以下页面...", target_address, soup.title.string)
+    htmls.put(soup)
+
+    
+def search_site():
+    while True:
+        try:
+            site = htmls.get(timeout=5)
+        except  Exception as e:
+            break
         # 保存网页
         # with open(".\saved.html", "wb") as f:
         #         f.write(r.content)
-        print("正在搜索以下网站...", target_address, soup.title.string)
-        print("-"*40)
-        div_feed = soup.find_all('div', class_="z-feed-foot-l")
-        search_func(div_feed, 0.1)
+        div_feed = site.find_all('div', class_="z-feed-foot-l")
+        analyze(div_feed, 0)
         
 
-def search_func(div_feed, timesleep=0.8):
+def analyze(div_feed, timesleep=0.3):
     for i in div_feed:
         for item in i.parent.previous_siblings:
             if item.name == 'h5':
@@ -49,5 +64,8 @@ def search_func(div_feed, timesleep=0.8):
 
 
 if __name__=="__main__":
-    main(10)
+    htmls = queue.Queue()
+    search_thread = threading.Thread(target=search_site)
+    search_thread.start()
+    main(100)
 
