@@ -13,7 +13,7 @@ def main(page_range):
     page_range:浏览范围，为整数"""
     for i in range(page_range):
         index= "https://www.smzdm.com/jingxuan/p"
-        target_address = "https://search.smzdm.com/?c=home&s=%E9%9F%B3%E5%93%8D&v=b&p=" + str(i)
+        target_address = index + str(i)
         request_thread = threading.Thread(target=get_site, args=(target_address,))
         request_thread.start()
         time.sleep(0.5)
@@ -46,22 +46,19 @@ def search_site():
         analyze(div_feed, 1)
         
 
-def analyze(div_feed, timesleep=0):
+def analyze(div_feed, timesleep=1):
     for i in div_feed:
         for item in i.parent.previous_siblings:
-            print(item.name)
+            # print(item.name)
             if item.name == 'h5':
                 try:
                     print("商品名:", item.a.string.strip(),"\n""直达地址:",item.a['href'])
                     print("价格", item.next_sibling.next_sibling.string.strip())
                 except Exception as e:
                     print("---获取失败---")
-        # 搜索首页时使用
-        # zhi = i.find('i', class_="icon-zhi-o-thin")
-        # buzhi = i.find('i', class_="icon-buzhi-o-thin")
-        # 搜索时使用
-        zhi = i.find('i', class_="z-icon-zhi")
-        buzhi = i.find('i', class_="z-icon-buzhi")
+
+        zhi = i.find('i', class_="icon-zhi-o-thin")
+        buzhi = i.find('i', class_="icon-buzhi-o-thin")
         if not zhi or not buzhi:
             continue
         print("值↑",zhi.next_sibling.string,"不值↑",buzhi.next_sibling.string)
@@ -73,5 +70,5 @@ if __name__=="__main__":
     htmls = queue.Queue()
     search_thread = threading.Thread(target=search_site)
     search_thread.start()
-    main(1)
+    main(10)
 
