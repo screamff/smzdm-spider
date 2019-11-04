@@ -37,7 +37,8 @@ def search_site():
     while True:
         try:
             site = htmls.get(timeout=5)
-        except  Exception as e:
+        except Exception as e:
+            print(e)
             break
         # 保存网页
         # with open(".\saved.html", "wb") as f:
@@ -55,6 +56,7 @@ def analyze(div_feed, timesleep=1):
                     print("商品名:", item.a.string.strip(),"\n""直达地址:",item.a['href'])
                     print("价格", item.next_sibling.next_sibling.string.strip())
                 except Exception as e:
+                    print(e)
                     print("---获取失败---")
 
         zhi = i.find('i', class_="icon-zhi-o-thin")
