@@ -8,10 +8,9 @@ import threading
 import queue
 
 
-def main(page_range):
+def main(page_range, item_name):
     """使用不同页码网址进行搜索
     page_range:浏览范围，为整数"""
-    item_name = input('输入你要搜索的商品关键词：')
     keyword = {'s': item_name.encode("utf-8")}
     for i in range(page_range):
         target_address = "https://search.smzdm.com/?c=home&v=b&p=" + str(i)
@@ -73,7 +72,8 @@ def analyze(div_feed, timesleep=0):
 
 if __name__=="__main__":
     htmls = queue.Queue()
+    item_name = input('输入你要搜索的商品关键词：')
     search_thread = threading.Thread(target=search_site)
     search_thread.start()
-    main(10)
+    main(10, item_name)
 
