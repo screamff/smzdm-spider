@@ -6,7 +6,21 @@ import threading
 import queue
 # todo:1.改写模块为类
 # 2.使用flask构建看板页面
-# 3.对值不值得买进行数据分析
+# 3.数据存入数据库
+# 4.对值不值得买进行数据分析
+
+
+class ItemSpider(threading.Thread):
+    def __init__(self):
+        self.htmls = queue.Queue()
+        
+
+    def run(self):
+        # 此处放线程
+        pass
+
+
+
 
 def main(page_range):
     """使用不同页码网址进行搜索
