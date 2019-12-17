@@ -139,7 +139,7 @@ if __name__=="__main__":
             target_address = url + str(i)
             thread = ItemSpider(target_address)
             thread.start()
-            time.sleep(0.5)
+            time.sleep(0.2)
 
     # target_address = "https://www.smzdm.com/jingxuan/xuan/s0f0t0b0d2r0p1"
     # thread = ItemSpider(target_address)
