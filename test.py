@@ -1,3 +1,5 @@
+# 本地页面解析测试
+# 需要在main.py中去掉保存文件的注释
 import re
 import requests
 import time
@@ -15,6 +17,9 @@ def analyze(div_feed, timesleep=1):
         # 商品图片url
         temp_img = i.parent.select_one('.z-feed-img').select_one('img')['src']
         print('缩略图地址:', temp_img)
+        # 商品id
+        item_id = re.match(r".*/(\d+)/", temp_url).group(1)
+        print('商品id:'item_id)
         # 商品值不值得买
         zhi = i.select_one('.icon-zhi-o-thin')
         buzhi = i.select_one('.icon-buzhi-o-thin')

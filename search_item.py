@@ -1,5 +1,6 @@
 # coding:utf-8
-# 截取商品名称等信息，方便批量操作等
+# 搜索物品
+# todo: 待重写
 import re
 import requests
 import time
