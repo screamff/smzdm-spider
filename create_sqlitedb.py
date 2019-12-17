@@ -1,6 +1,6 @@
 # 创建数据库脚本
 from sqlalchemy import create_engine
-from sqlalchemy import Column, Date, Integer, String, ForeignKey
+from sqlalchemy import Column, DateTime, Integer, String, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import datetime
@@ -23,7 +23,7 @@ class Item(Base):
     price = Column(String)
     url = Column(String)
     img = Column(String)
-    update_time = Column(String)
+    update_time = Column(DateTime)
 
     def __repr__(self):
         return(self.name)
