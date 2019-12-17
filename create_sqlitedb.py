@@ -20,26 +20,26 @@ class Item(Base):
     item_id = Column(Integer)
     zhi = Column(String)
     buzhi = Column(String)
+    price = Column(String)
     url = Column(String)
     img = Column(String)
     update_time = Column(String)
-    price = Column(String)
 
-    def __str__(self):
-        return self.id
+    def __repr__(self):
+        return(self.name)
 
 # 创建表
-# Base.metadata.create_all(engine)
+Base.metadata.create_all(engine)
 
-### 测试
-# 连接数据库
-engine = create_engine('sqlite:///smzdm.db')
-# 基本类
-Base = declarative_base()
-Session = sessionmaker(bind=engine)
-session = Session()
-id = session.query(Item.item_id).filter(Item.item_id==18142422).all()
-if id:
-    print(id)
-else:
-    print("no id")
+# ### 测试
+# # 连接数据库
+# engine = create_engine('sqlite:///smzdm.db')
+# # 基本类
+# Base = declarative_base()
+# Session = sessionmaker(bind=engine)
+# session = Session()
+# id = session.query(Item).filter(Item.item_id==18144407).one()
+# if id:
+#     print(id.url)
+# else:
+#     print("no id")

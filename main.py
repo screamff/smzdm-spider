@@ -14,7 +14,7 @@ from sqlalchemy.orm import sessionmaker
 # 2.使用flask构建看板页面
 # 3.数据存入数据库 # 已完成
 # 4.对值不值得买进行数据分析
-# 5.可能采取对商品详情页进行数据解析(列表页解析太麻烦了)
+# 5.可能采取对商品详情页进行数据解析(单页解析太麻烦了)
 
 # 连接数据库
 engine = create_engine('sqlite:///smzdm.db')
@@ -59,10 +59,7 @@ class ItemSpider(threading.Thread):
             # print('详细描述:', temp_url)
             # 商品id
             item_id = re.match(r".*/(\d+)/", temp_url).group(1)
-            id = session.query(Item.item_id).filter(Item.item_id==item_id).all()
-            if id:
-                # todo: update值不值
-                continue
+            old_item = session.query(Item).filter(Item.item_id==item_id).scalar()
             # 商品图片url
             temp_img = i.parent.select_one('.z-feed-img').select_one('img')['src']
             # print('缩略图地址:', temp_img)
@@ -70,6 +67,13 @@ class ItemSpider(threading.Thread):
             zhi = i.select_one('.icon-zhi-o-thin').next_sibling.string
             buzhi = i.select_one('.icon-buzhi-o-thin').next_sibling.string
             # print("值↑",zhi,"不值↑",buzhi)
+            # 更新老商品的评价
+            if old_item:
+                # todo: update值不值
+                old_item.zhi = zhi
+                old_item.buzhi = buzhi
+                # print({'zhi':zhi, 'buzhi':buzhi})
+                continue
             # 商品更新日期
             temp = i.select_one('.feed-block-extras').contents
             temp_time = temp[0].strip()
@@ -114,10 +118,10 @@ class Item(Base):
     item_id = Column(Integer)
     zhi = Column(String)
     buzhi = Column(String)
+    price = Column(String)
     url = Column(String)
     img = Column(String)
     update_time = Column(String)
-    price = Column(String)
 
 
     def __init__(self, name, item_id, url, img, update_time, price, zhi, buzhi):
@@ -127,9 +131,9 @@ class Item(Base):
         self.url = url
         self.img = img
         self.update_time = update_time + datetime.datetime.now().strftime(' %Y-%m-%d')
-        self.price =price
         self.zhi = zhi
         self.buzhi = buzhi
+        self.price =price
 
     def __repr__(self):
         return("商品名字:{}\n详细地址:{}".format(self.name, self.url))
@@ -143,9 +147,8 @@ class Item(Base):
 
 
 if __name__=="__main__":
-    for i in range(5):
+    for i in range(1, 5):
         target_address = "https://www.smzdm.com/jingxuan/p" + str(i)
         thread = ItemSpider(target_address)
         thread.start()
-        time.sleep(1)
-        
+        time.sleep(0.5)
