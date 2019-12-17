@@ -40,8 +40,8 @@ class ItemSpider(threading.Thread):
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.70 Safari/537.36"})
         soup = BeautifulSoup(r.content, "html5lib")
         # 保存网页测试用
-        with open(r".\saved.html", "wb") as f:
-            f.write(r.content)
+        # with open(r".\saved.html", "wb") as f:
+        #     f.write(r.content)
         div_row = soup.select('.feed-row-wide')
         print('本次商品数量', len(div_row))
         self.analyze(div_row, 1)
@@ -60,10 +60,10 @@ class ItemSpider(threading.Thread):
             item_id = re.match(r".*/(\d+)/", temp_url).group(1)
             old_item = session.query(Item).filter(Item.item_id==item_id).scalar()
             # 商品图片url
-            temp_img = content.parent.select_one('.z-feed-img').select_one('img')['src']
+            temp_img = line.select_one('.z-feed-img').select_one('img')['src']
             # 商品值不值得买
-            zhi = content.select_one('.icon-zhi-o-thin').next_sibling.string
-            buzhi = content.select_one('.icon-buzhi-o-thin').next_sibling.string
+            zhi = int(content.select_one('.icon-zhi-o-thin').next_sibling.string)
+            buzhi = int(content.select_one('.icon-buzhi-o-thin').next_sibling.string)
             # 更新老商品的评价
             if old_item:
                 old_item.zhi = zhi
@@ -72,26 +72,14 @@ class ItemSpider(threading.Thread):
             # 商品更新日期
             temp_time = datetime.datetime.fromtimestamp(int(line['timesort']))
             # print('更新日期:', temp_time)
-            # 商品价格, todo:之后尝试不要请求商品详情页
+            # 商品价格
             temp_price = content.select_one('.z-highlight')    
             try:
-                temp_price = temp_price.string.strip()
-            except AttributeError:
-                # 记录错误日志
-                with open(r".\errorlog.html", "wb") as f:
-                    f.write(str(content).encode('utf-8'))
-                if temp_price.get_text():
-                    temp_price = temp_price.get_text().strip()
-                else:
-                    r = requests.get(temp_url, headers={"User-Agent":
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.70 Safari/537.36"})
-                    soup = BeautifulSoup(r.content, "html5lib")
-                    price = soup.select_one('.price')
-                    if price:
-                        temp_price = price.span.string
-                    else:
-                        old_price = soup.select_one('.old-price').select('span')[1]
-                        temp_price = old_price.string
+                temp_price = temp_price.get_text().strip()
+            except:
+                print('此处出现错误:', temp_price)
+                # with open(r".\errorlog.html", "wb") as f:
+                #     f.write(str(content).encode('utf-8'))
             print("-"*40)
             item = Item(name=temp_name, item_id=item_id, url=temp_url, img=temp_img,
                         update_time=temp_time, price=temp_price, zhi=zhi, buzhi=buzhi)
@@ -108,8 +96,8 @@ class Item(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String)
     item_id = Column(Integer)
-    zhi = Column(String)
-    buzhi = Column(String)
+    zhi = Column(Integer)
+    buzhi = Column(Integer)
     price = Column(String)
     url = Column(String)
     img = Column(String)
@@ -139,12 +127,19 @@ class Item(Base):
 
 
 if __name__=="__main__":
-    for i in range(1, 5):
-        # target_address = "https://www.smzdm.com/jingxuan/p" + str(i)
-        target_address = "https://www.smzdm.com/jingxuan/xuan/s0f0t0b0d0r3p" + str(i)
-        thread = ItemSpider(target_address)
-        thread.start()
-        time.sleep(0.5)
+    Base.metadata.create_all(engine)
+    urls = {'all':"https://www.smzdm.com/jingxuan/p",
+            'inland':"https://www.smzdm.com/jingxuan/xuan/s0f0t0b0d1r0p",
+            'haitao':"https://www.smzdm.com/jingxuan/xuan/s0f0t0b0d2r0p",
+            'quanma':"https://www.smzdm.com/jingxuan/xuan/s0f0t0b0d0r2p",
+            'huodong':"https://www.smzdm.com/jingxuan/xuan/s0f0t0b0d0r3p",
+            'computer':"https://www.smzdm.com/jingxuan/xuan/s0f163t0b0d0r0p"}
+    for url in urls.values():
+        for i in range(1, 5):
+            target_address = url + str(i)
+            thread = ItemSpider(target_address)
+            thread.start()
+            time.sleep(0.5)
 
     # target_address = "https://www.smzdm.com/jingxuan/xuan/s0f0t0b0d2r0p1"
     # thread = ItemSpider(target_address)
