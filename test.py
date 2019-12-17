@@ -19,7 +19,7 @@ def analyze(div_feed, timesleep=1):
         print('缩略图地址:', temp_img)
         # 商品id
         item_id = re.match(r".*/(\d+)/", temp_url).group(1)
-        print('商品id:'item_id)
+        print('商品id:', item_id)
         # 商品值不值得买
         zhi = i.select_one('.icon-zhi-o-thin')
         buzhi = i.select_one('.icon-buzhi-o-thin')
