@@ -5,6 +5,11 @@ import requests
 import time
 import datetime
 from bs4 import BeautifulSoup
+import logging
+
+logging.basicConfig(filename='log.txt')
+logger = logging.getLogger(__name__)
+logger.warning('123')
 
 
 def analyze(div_row, timesleep=1):
@@ -65,13 +70,13 @@ def analyze(div_row, timesleep=1):
         # 标准输出延迟
         # time.sleep(timesleep)
 
-with open('saved.html', 'rb') as f:
-    soup = BeautifulSoup(f, "html5lib")
-div_row = soup.select('.feed-row-wide')
-analyze(div_row)
+# with open('saved.html', 'rb') as f:
+#     soup = BeautifulSoup(f, "html5lib")
+# div_row = soup.select('.feed-row-wide')
+# analyze(div_row)
 
 # with open('errorlog.html', 'rb') as f:
 #     soup = BeautifulSoup(f, "html5lib")
 # div_content = soup.select('.z-feed-content')
 # analyze(div_content)
-    
+

@@ -6,15 +6,19 @@ import threading
 import queue
 import datetime
 import re
+import logging
 from sqlalchemy import create_engine
 from sqlalchemy import Column, DateTime, Integer, String, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+
 # todo:1.改写模块为类 # 已完成
 # 2.使用flask构建看板页面
 # 3.数据存入数据库 # 已完成
 # 4.对值不值得买进行数据分析
 # 5.可能采取对商品详情页进行数据解析(单页解析太麻烦了)
+# 常见问题:
+# 多线程创建多个session（15个左右）引发的database locked, sqlite的性能限制,增加请求延迟或增加数据库的timeout时间,减少线程数(使用线程池或异步)
 
 # 连接数据库
 engine = create_engine('sqlite:///smzdm.db')
@@ -22,6 +26,9 @@ engine = create_engine('sqlite:///smzdm.db')
 Base = declarative_base()
 Session = sessionmaker(bind=engine)
 
+# 日志记录
+logging.basicConfig(filename='log.txt', format="%(levelname)s:%(name)s:%(asctime)s:%(message)s")
+logger = logging.getLogger(__name__)
 
 class ItemSpider(threading.Thread):
     """爬取smzdm精选好价页面物品信息
@@ -77,15 +84,12 @@ class ItemSpider(threading.Thread):
             try:
                 temp_price = temp_price.get_text().strip()
             except:
-                print('此处出现错误:', temp_price)
-                # with open(r".\errorlog.html", "wb") as f:
-                #     f.write(str(content).encode('utf-8'))
-            print("-"*40)
+                logger.warning('item:{}price:{}'.format(temp_url, temp_price))
             item = Item(name=temp_name, item_id=item_id, url=temp_url, img=temp_img,
                         update_time=temp_time, price=temp_price, zhi=zhi, buzhi=buzhi)
             session.add(item)
             session.commit()
-            print(item)
+            # print(item)
             # stdout输出延迟
             # time.sleep(timesleep)
         session.close()
@@ -127,6 +131,7 @@ class Item(Base):
 
 
 if __name__=="__main__":
+    start_time = time.time()
     Base.metadata.create_all(engine)
     urls = {'all':"https://www.smzdm.com/jingxuan/p",
             'inland':"https://www.smzdm.com/jingxuan/xuan/s0f0t0b0d1r0p",
@@ -134,13 +139,12 @@ if __name__=="__main__":
             'quanma':"https://www.smzdm.com/jingxuan/xuan/s0f0t0b0d0r2p",
             'huodong':"https://www.smzdm.com/jingxuan/xuan/s0f0t0b0d0r3p",
             'computer':"https://www.smzdm.com/jingxuan/xuan/s0f163t0b0d0r0p"}
-    for url in urls.values():
-        for i in range(1, 5):
-            target_address = url + str(i)
-            thread = ItemSpider(target_address)
-            thread.start()
-            time.sleep(0.2)
-
-    # target_address = "https://www.smzdm.com/jingxuan/xuan/s0f0t0b0d2r0p1"
-    # thread = ItemSpider(target_address)
-    # thread.start()
+    for i in range(1, 10):
+        target_address = urls['huodong'] + str(i)
+        thread = ItemSpider(target_address)
+        thread.start()
+        time.sleep(1)
+    # 全部子线程
+    for spider_thread in threading.enumerate()[1:]:
+        spider_thread.join()
+    print('用时:', time.time()-start_time)
