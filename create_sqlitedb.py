@@ -1,4 +1,5 @@
 # 创建数据库脚本
+# 废弃,测试用
 from sqlalchemy import create_engine
 from sqlalchemy import Column, DateTime, Integer, String, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base

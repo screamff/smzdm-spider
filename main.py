@@ -1,22 +1,22 @@
 # coding:utf-8
-import requests
 import time
-from bs4 import BeautifulSoup
 import threading
 import queue
 import datetime
 import re
+import os
 import logging
+import requests
+from bs4 import BeautifulSoup
 from sqlalchemy import create_engine
 from sqlalchemy import Column, DateTime, Integer, String, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-# todo:1.改写模块为类 # 已完成
+# todo:
+# 1.关键词搜索
 # 2.使用flask构建看板页面
-# 3.数据存入数据库 # 已完成
-# 4.对值不值得买进行数据分析
-# 5.可能采取对商品详情页进行数据解析(单页解析太麻烦了)
+# 3.进行数据分析
 # 常见问题:
 # 多线程创建多个session（15个左右）引发的database locked, sqlite的性能限制,增加请求延迟或增加数据库的timeout时间,
 # 减少线程数(使用线程池或异步),采取将请求线程与处理线程分开的方法(最开始的方法)。
@@ -28,10 +28,10 @@ Base = declarative_base()
 Session = sessionmaker(bind=engine)
 
 # 日志记录
-logging.basicConfig(filename='log.txt',
+logging.basicConfig(filename=os.path.join(os.path.dirname(__file__), 'log.txt'),
                     format="%(levelname)s:%(name)s:%(asctime)s:%(message)s",
                     level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(os.path.basename(__file__))
 
 
 class ItemSpider(threading.Thread):
@@ -40,7 +40,7 @@ class ItemSpider(threading.Thread):
         --keyword  搜索物品的参数,暂未完成(页面解析方法不一样)
     示例--itemspider = ItemSpider("https://www.smzdm.com/jingxuan/p1")
           itemspider.start()"""
-    divs = queue.Queue(maxsize=100)
+    divs = queue.Queue()
     def __init__(self, target_address, keyword=None):
         threading.Thread.__init__(self)
         self.target_address = target_address
@@ -144,7 +144,7 @@ def start_analyze():
             print('解析中...')
             ItemSpider.analyze(div_row, session)
         except Exception as e:
-            logger.warning('analyze error:{}'.format(e))
+            logger.warning('analyze_warning:{}'.format(e))
             break
     session.close()
 
@@ -154,7 +154,6 @@ if __name__=="__main__":
     Base.metadata.create_all(engine)
 
     # 初始化一些变量
-    divs = queue.Queue(maxsize=100)
     start_time = time.time()
 
     # 预设的一些可爬取页面
@@ -168,11 +167,11 @@ if __name__=="__main__":
     
     # 爬取-请求线程
     sem = threading.Semaphore(30)
+    # 爬取-处理线程
+    thread = threading.Thread(target=start_analyze)
+    thread.start()
     with sem:
-        # 爬取-处理线程
-        thread = threading.Thread(target=start_analyze)
-        thread.start()
-        for i in range(1, 100):
+        for i in range(1, 2):
             target_address = urls['all'] + str(i)
             thread = ItemSpider(target_address)
             thread.start()

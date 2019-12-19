@@ -5,11 +5,8 @@ import requests
 import time
 import datetime
 from bs4 import BeautifulSoup
+import os
 import logging
-
-logging.basicConfig(filename='log.txt')
-logger = logging.getLogger(__name__)
-logger.warning('123')
 
 
 def analyze(div_row, timesleep=1):
@@ -19,7 +16,7 @@ def analyze(div_row, timesleep=1):
         # content = line
         # 商品名字
         temp_name = content.select_one('div h5')
-        print('商品名字:', temp_name.a.string.strip())
+        print('商品名字:', temp_name.a.get_text().strip())
         # 商品地址
         temp_url = temp_name.a['href']
         print('详细描述:', temp_url)
@@ -30,11 +27,25 @@ def analyze(div_row, timesleep=1):
         item_id = re.match(r".*/(\d+)/", temp_url).group(1)
         print('商品id:', item_id)
         # 商品值不值得买
-        zhi = content.select_one('.icon-zhi-o-thin')
-        buzhi = content.select_one('.icon-buzhi-o-thin')
-        print("值↑",zhi.next_sibling.string,"不值↑",buzhi.next_sibling.string)
+        # zhi = int(content.select_one('.icon-zhi-o-thin').next_sibling.string)
+        # buzhi = int(content.select_one('.icon-buzhi-o-thin').next_sibling.string)
+        zhi = int(content.select_one('.z-icon-zhi').next_element.next_element.string)
+        buzhi = int(content.select_one('.z-icon-buzhi').next_element.next_element.string)
+        print("值↑",zhi,"不值↑",buzhi)
         # 商品更新日期
-        temp_time = datetime.datetime.fromtimestamp(int(line['timesort']))
+        temp_time = content.select_one('.feed-block-extras').next_element.strip()
+        try:
+            temp_time = time.strptime(temp_time,'%H:%M')
+            now = datetime.datetime.now()
+            temp_time = datetime.datetime(now.year, now.month, now.day,
+                                          temp_time.tm_hour, temp_time.tm_min)
+        except:
+            temp_time = time.strptime(temp_time,'%m-%d %H:%M')
+            now = datetime.datetime.now()
+            temp_time = datetime.datetime(now.year, temp_time.tm_mon,
+                                          temp_time.tm_mday, temp_time.tm_hour,
+                                          temp_time.tm_min)
+        # temp_time = datetime.datetime.fromtimestamp(int(line['timesort']))
         print('更新日期:', temp_time)
         # 商品价格
         temp_price = content.select_one('.z-highlight')    
@@ -42,33 +53,7 @@ def analyze(div_row, timesleep=1):
             print('价格:', temp_price.get_text().strip())
         except:
             print('本段出现错误:', temp_price)
-            # if temp_price.get_text().strip():
-            #     print('gettext价格:', temp_price.get_text().strip())
-            # else:
-            #     r = requests.get(temp_url, headers={"User-Agent":
-            #     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.70 Safari/537.36"})
-            #     soup = BeautifulSoup(r.content, "html5lib")
-            #     price = soup.select_one('.price')
-            #     if price:
-            #         print("另类价格:", price.span.string)
-            #     else:
-            #         old_price = soup.select_one('.old-price').select('span')[1]
-            #         print("过期价格:", old_price.string)
-            # print(price.string)
-            # for child in temp.contents:
-            #     print(child)
-            #     child = child.string.strip()
-            #     price = re.match(r".*元.*", child)
-            #     if price:
-            #         print('价格:', child)
-            #         break
-            # print(price)
-            # print(temp)
-            # print(temp.contents[1].contents)
-            # print('过期价格:', temp.contents[2].strip())
         print("-"*40)
-        # 标准输出延迟
-        # time.sleep(timesleep)
 
 # with open('saved.html', 'rb') as f:
 #     soup = BeautifulSoup(f, "html5lib")
@@ -80,3 +65,8 @@ def analyze(div_row, timesleep=1):
 # div_content = soup.select('.z-feed-content')
 # analyze(div_content)
 
+logger = logging.getLogger(os.path.basename(__file__))
+print(logger)
+path = os.path.join(os.path.dirname(__file__), 'log.txt')
+with open(path, 'r') as f:
+    print(f.read())
