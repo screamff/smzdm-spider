@@ -18,7 +18,8 @@ from sqlalchemy.orm import sessionmaker
 # 4.对值不值得买进行数据分析
 # 5.可能采取对商品详情页进行数据解析(单页解析太麻烦了)
 # 常见问题:
-# 多线程创建多个session（15个左右）引发的database locked, sqlite的性能限制,增加请求延迟或增加数据库的timeout时间,减少线程数(使用线程池或异步)
+# 多线程创建多个session（15个左右）引发的database locked, sqlite的性能限制,增加请求延迟或增加数据库的timeout时间,
+# 减少线程数(使用线程池或异步),采取将请求线程与处理线程分开的方法(最开始的方法)。
 
 # 连接数据库
 engine = create_engine('sqlite:///smzdm.db')
@@ -27,8 +28,11 @@ Base = declarative_base()
 Session = sessionmaker(bind=engine)
 
 # 日志记录
-logging.basicConfig(filename='log.txt', format="%(levelname)s:%(name)s:%(asctime)s:%(message)s")
+logging.basicConfig(filename='log.txt',
+                    format="%(levelname)s:%(name)s:%(asctime)s:%(message)s",
+                    level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 
 class ItemSpider(threading.Thread):
     """爬取smzdm精选好价页面物品信息
@@ -36,6 +40,7 @@ class ItemSpider(threading.Thread):
         --keyword  搜索物品的参数,暂未完成(页面解析方法不一样)
     示例--itemspider = ItemSpider("https://www.smzdm.com/jingxuan/p1")
           itemspider.start()"""
+    divs = queue.Queue(maxsize=100)
     def __init__(self, target_address, keyword=None):
         threading.Thread.__init__(self)
         self.target_address = target_address
@@ -50,13 +55,15 @@ class ItemSpider(threading.Thread):
         # with open(r".\saved.html", "wb") as f:
         #     f.write(r.content)
         div_row = soup.select('.feed-row-wide')
-        print('本次商品数量', len(div_row))
-        self.analyze(div_row, 1)
+        if len(div_row)>0:
+            self.divs.put(div_row)
+            print('正在处理...数量:{},使用线程:{}'.format(len(div_row), threading.current_thread()))
+        else:
+            pass
+
 
     @staticmethod
-    def analyze(div_row, timesleep=1):
-        # 为一个线程分配一个会话
-        session = Session()
+    def analyze(div_row, session):
         for line in div_row:
             content = line.select_one('.z-feed-content')
             # 商品名字
@@ -88,12 +95,11 @@ class ItemSpider(threading.Thread):
             item = Item(name=temp_name, item_id=item_id, url=temp_url, img=temp_img,
                         update_time=temp_time, price=temp_price, zhi=zhi, buzhi=buzhi)
             session.add(item)
-            session.commit()
             # print(item)
             # stdout输出延迟
-            # time.sleep(timesleep)
-        session.close()
-    
+            # time.sleep(1)
+        session.commit()
+
 
 class Item(Base):
     __tablename__ = 'items'
@@ -130,21 +136,50 @@ class Item(Base):
         #                                                                                        self.img))
 
 
+def start_analyze():
+    session = Session()
+    while True:
+        try:
+            div_row = ItemSpider.divs.get(timeout=3)
+            print('解析中...')
+            ItemSpider.analyze(div_row, session)
+        except Exception as e:
+            logger.warning('analyze error:{}'.format(e))
+            break
+    session.close()
+
+
 if __name__=="__main__":
-    start_time = time.time()
+    # 若没有数据库就创建
     Base.metadata.create_all(engine)
+
+    # 初始化一些变量
+    divs = queue.Queue(maxsize=100)
+    start_time = time.time()
+
+    # 预设的一些可爬取页面
     urls = {'all':"https://www.smzdm.com/jingxuan/p",
             'inland':"https://www.smzdm.com/jingxuan/xuan/s0f0t0b0d1r0p",
             'haitao':"https://www.smzdm.com/jingxuan/xuan/s0f0t0b0d2r0p",
             'quanma':"https://www.smzdm.com/jingxuan/xuan/s0f0t0b0d0r2p",
             'huodong':"https://www.smzdm.com/jingxuan/xuan/s0f0t0b0d0r3p",
             'computer':"https://www.smzdm.com/jingxuan/xuan/s0f163t0b0d0r0p"}
-    for i in range(1, 10):
-        target_address = urls['huodong'] + str(i)
-        thread = ItemSpider(target_address)
+
+    
+    # 爬取-请求线程
+    sem = threading.Semaphore(30)
+    with sem:
+        # 爬取-处理线程
+        thread = threading.Thread(target=start_analyze)
         thread.start()
-        time.sleep(1)
-    # 全部子线程
+        for i in range(1, 100):
+            target_address = urls['all'] + str(i)
+            thread = ItemSpider(target_address)
+            thread.start()
+            time.sleep(0.1)
+
+    # 计算耗时
     for spider_thread in threading.enumerate()[1:]:
         spider_thread.join()
+    logger.info('use_time:{}'.format(time.time()-start_time))
     print('用时:', time.time()-start_time)
