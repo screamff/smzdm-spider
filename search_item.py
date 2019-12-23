@@ -43,7 +43,7 @@ class ItemSpider(threading.Thread):
     def run(self):
         r = requests.get(self.target_address, params=self.keyword, cookies=cookies_dict, headers={"User-Agent":
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.79 Safari/537.36"})
-        soup = BeautifulSoup(r.content, "html5lib")
+        soup = BeautifulSoup(r.content, "html.parser")
         # 保存网页测试用
         # with open(r".\saved.html", "wb") as f:
         #     f.write(r.content)
@@ -140,10 +140,12 @@ def start_analyze():
             div_row = ItemSpider.divs.get(timeout=3)
             print('解析中...')
             ItemSpider.analyze(div_row, session)
+        except queue.Empty:
+            logger.info('all pages finished')
+            break
         except Exception as e:
             logger.warning('analyze_warning:{}'.format(e))
-            session.close()
-            break
+            continue
     session.close()
 
 

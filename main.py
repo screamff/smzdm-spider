@@ -50,7 +50,7 @@ class ItemSpider(threading.Thread):
     def run(self):
         r = requests.get(self.target_address, params=self.keyword, headers={"User-Agent":
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.70 Safari/537.36"})
-        soup = BeautifulSoup(r.content, "html5lib")
+        soup = BeautifulSoup(r.content, "html.parser")
         # 保存网页测试用
         # with open(r".\saved.html", "wb") as f:
         #     f.write(r.content)
@@ -143,9 +143,12 @@ def start_analyze():
             div_row = ItemSpider.divs.get(timeout=3)
             print('解析中...')
             ItemSpider.analyze(div_row, session)
+        except queue.Empty:
+            logger.info('all pages finished')
+            break
         except Exception as e:
             logger.warning('analyze_warning:{}'.format(e))
-            break
+            continue
     session.close()
 
 
@@ -171,7 +174,7 @@ if __name__=="__main__":
     thread = threading.Thread(target=start_analyze)
     thread.start()
     with sem:
-        for i in range(1, 2):
+        for i in range(1, 5):
             target_address = urls['all'] + str(i)
             thread = ItemSpider(target_address)
             thread.start()
