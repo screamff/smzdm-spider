@@ -14,10 +14,9 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
 # todo:
-# 1.关键词搜索
-# 2.使用flask构建看板页面
-# 3.进行数据分析
-# 常见问题:
+# 1.使用flask构建看板页面
+# 2.进行数据分析
+# 性能问题:
 # 多线程创建多个session（15个左右）引发的database locked, sqlite的性能限制,增加请求延迟或增加数据库的timeout时间,
 # 减少线程数(使用线程池或异步),采取将请求线程与处理线程分开的方法(最开始的方法)。
 
@@ -57,7 +56,7 @@ class ItemSpider(threading.Thread):
         div_row = soup.select('.feed-row-wide')
         if len(div_row)>0:
             self.divs.put(div_row)
-            print('正在处理...数量:{},使用线程:{}'.format(len(div_row), threading.current_thread()))
+            # print('正在处理...数量:{},使用线程:{}'.format(len(div_row), threading.current_thread()))
         else:
             pass
 
@@ -141,7 +140,7 @@ def start_analyze():
     while True:
         try:
             div_row = ItemSpider.divs.get(timeout=3)
-            print('解析中...')
+            # print('解析中...')
             ItemSpider.analyze(div_row, session)
         except queue.Empty:
             logger.info('all pages finished')
@@ -155,10 +154,6 @@ def start_analyze():
 if __name__=="__main__":
     # 若没有数据库就创建
     Base.metadata.create_all(engine)
-
-    # 初始化一些变量
-    start_time = time.time()
-
     # 预设的一些可爬取页面
     urls = {'all':"https://www.smzdm.com/jingxuan/p",
             'inland':"https://www.smzdm.com/jingxuan/xuan/s0f0t0b0d1r0p",
@@ -166,22 +161,23 @@ if __name__=="__main__":
             'quanma':"https://www.smzdm.com/jingxuan/xuan/s0f0t0b0d0r2p",
             'huodong':"https://www.smzdm.com/jingxuan/xuan/s0f0t0b0d0r3p",
             'computer':"https://www.smzdm.com/jingxuan/xuan/s0f163t0b0d0r0p"}
-
-    
-    # 爬取-请求线程
-    sem = threading.Semaphore(30)
-    # 爬取-处理线程
-    thread = threading.Thread(target=start_analyze)
-    thread.start()
-    with sem:
-        for i in range(1, 5):
-            target_address = urls['all'] + str(i)
-            thread = ItemSpider(target_address)
-            thread.start()
-            time.sleep(0.1)
-
-    # 计算耗时
-    for spider_thread in threading.enumerate()[1:]:
-        spider_thread.join()
-    logger.info('use_time:{}'.format(time.time()-start_time))
-    print('用时:', time.time()-start_time)
+    while True:
+        # 初始化一些变量
+        start_time = time.time()
+        # 爬取-请求线程
+        sem = threading.Semaphore(30)
+        # 爬取-处理线程
+        thread = threading.Thread(target=start_analyze)
+        thread.start()
+        with sem:
+            for i in range(1, 10):
+                target_address = urls['all'] + str(i)
+                thread = ItemSpider(target_address)
+                thread.start()
+                time.sleep(0.1)
+        # 计算耗时
+        for spider_thread in threading.enumerate()[1:]:
+            spider_thread.join()
+        logger.info('use_time:{}'.format(time.time()-start_time))
+        print('用时:', time.time()-start_time)
+        time.sleep(300)
